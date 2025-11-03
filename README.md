@@ -83,6 +83,14 @@ Test minimal ciblé sur la directive 4 :
 
 ---
 
+### 🚀 Lancement du test
+
+Pour exécuter le pipeline sur les lois disponibles dans shared/directives/ :
+```
+python3 shared/main.py
+```
+Ce script analysera automatiquement chaque loi, extraira les mesures, mettra à jour les fichiers dans shared/measures/ et recalculera les scores dans shared/data/final_company_scores.csv.
+
 ## 📈 Exemple de sortie
 
 | Symbol | Company               | nb_matched_measures | normalized_score | Weight   |
