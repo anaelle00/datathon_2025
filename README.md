@@ -1,8 +1,15 @@
-📊 Spark & Pulse — Analyse Automatisée de l'Impact des Régulations sur les Marchés Financiers
-🧭 Objectif
+
+# 📊 Spark & Pulse — Analyse Automatisée de l'Impact des Régulations sur les Marchés Financiers
+
+## 🧭 Objectif
 
 Concevoir un pipeline d’analyse réglementaire capable de transformer un texte de loi en un score d’impact sur le S&P 500, permettant à des analystes financiers de comprendre immédiatement quels secteurs et entreprises sont positivement ou négativement affectés.
-⚙️ Structure du projet
+
+---
+
+## ⚙️ Structure du projet
+
+```
 shared/
 ├── app/
 │   ├── extract.py       # Extraction des mesures à partir d’un texte législatif (Claude via Bedrock)
@@ -20,124 +27,96 @@ shared/
 │   └── *.html / *.xml              # Textes législatifs bruts à analyser
 │
 └── main.py              # Script de test exécutant le pipeline complet pour chaque loi
+```
 
-🔍 Fonctionnalités principales
-📥 extract.py
+---
 
-Fonction : extract_measures_from_file(file_path)
+## 🔍 Fonctionnalités principales
 
-Utilise AWS Bedrock (Claude 3 Sonnet) pour lire et interpréter un texte juridique.
+### 📥 `extract.py`
 
-Retourne une liste de mesures sous forme de dictionnaires JSON avec :
+**Fonction : `extract_measures_from_file(file_path)`**  
+- Utilise AWS Bedrock (Claude 3 Sonnet) pour lire et interpréter un texte juridique.
+- Retourne une liste de mesures avec :
+  - `law_name`, `country`, `type_of_regulation`, `application_date`
+  - `sector` (liste choisie parmi 6 secteurs majeurs)
+  - `measure_text` (résumé clair)
+  - `sentiment_score` (entre -1 et +1)
+- Détection automatique de la langue via `langdetect`.
 
-law_name, country, type_of_regulation, application_date
+**Fonction : `save_measures_to_csv(measures, output_dir)`**  
+- Sauvegarde les mesures extraites dans un fichier CSV dans `shared/measures/`.
 
-sector (liste choisie parmi 6 secteurs majeurs)
+---
 
-measure_text (résumé)
+### 📊 `scoring.py`
 
-sentiment_score (entre -1 et +1)
+**Fonction : `calculate_company_scores()`**
+- Compare les secteurs des mesures avec ceux des entreprises.
+- Calcule un score pour chaque entreprise :
+  ```
+  normalized_score = somme des sentiments / nombre de mesures pertinentes
+  ```
+- Pondération possible avec les poids des entreprises du S&P 500.
 
-⚠️ Gère également la détection de langue avec langdetect.
+**Fonction : `load_all_measures()`**
+- Agrège tous les CSVs de `shared/measures/` pour recomputation dynamique.
 
-Fonction : save_measures_to_csv(measures, output_dir)
+---
 
-Sauvegarde proprement les mesures extraites dans un fichier CSV dans le dossier shared/measures/.
+### 🧪 `pipeline.py`
 
-📊 scoring.py
+**Fonction principale : `pipeline_add_law_and_recompute(file_path)`**
+- Extrait les mesures.
+- Enregistre dans `measures/`.
+- Recharge les données entreprises.
+- Calcule les scores et sauvegarde dans `data/final_company_scores.csv`.
 
-Fonction calculate_company_scores() :
+---
 
-Associe les mesures aux entreprises en comparant les secteurs.
+### 🧪 `main.py`
 
-Calcule un score normalisé :
+Test minimal ciblé sur la directive 4 :  
+- ✅ Vérifie que les mesures sont bien générées dans `measures/`
+- ✅ Génère un CSV `final_company_scores.csv` dans `data/`
+- 🔁 Sert de preuve de fonctionnement du pipeline bout-en-bout
 
-score
-=
-somme des sentiments
-nombre de mesures pertinentes
-score=
-nombre de mesures pertinentes
-somme des sentiments
-	​
+---
 
-Fonction load_all_measures() :
+## 📈 Exemple de sortie
 
-Fusionne tous les fichiers dans shared/measures/ pour mise à jour cumulative.
+| Symbol | Company               | nb_matched_measures | normalized_score | Weight   |
+|--------|------------------------|----------------------|------------------|----------|
+| AAPL   | Apple Inc.             | 5                    | -0.6             | 0.006    |
+| JNJ    | Johnson & Johnson      | 3                    | 0.33             | 0.0056   |
+| XOM    | ExxonMobil             | 2                    | 1.0              | 0.00003  |
 
+Interprétation :
+- `+1.0` → fortement favorisé
+- `0.0` → pas d’effet détecté
+- `-1.0` → impact réglementaire négatif
 
-🧪 pipeline.py
+---
 
-Fonction principale : pipeline_add_law_and_recompute(file_path)
+## 🛠️ Outils utilisés
 
-Étapes :
+| Outil / Service        | Rôle                                  |
+|------------------------|---------------------------------------|
+| **AWS Bedrock**        | Traitement LLM multilingue            |
+| **langdetect**         | Détection automatique de langue       |
+| **pandas**             | Analyse et nettoyage de données       |
+| **Jupyter + EC2**      | Prototypage cloud                     |
+| *(S3 prévu)*           | Persistance automatique (non fait)    |
 
-Extrait les mesures d’une nouvelle loi.
+---
 
-Enregistre les mesures dans shared/measures/.
+## 🔮 Roadmap
 
-Recharge toutes les mesures existantes.
+- 🧠 Apprentissage supervisé sur des signaux de marché réels.
+- 🧾 Extraction hiérarchique des lois (par articles).
+- 📊 UI React avec Flask pour visualiser :
+  - Mesures par secteur
+  - Entreprises les plus sensibles
+  - Scores pondérés globalement
+- 🕒 Historique temporel multi-lois
 
-Charge les données d’entreprise (merged_company_data.csv).
-
-Calcule les scores avec calculate_company_scores.
-
-Sauvegarde le CSV final_company_scores.csv.
-
-🧪 main.py (script de test)
-Le fichier main.py exécute un test ciblé en appliquant le pipeline complet à une seule directive (en l’occurrence : 4.REGULATION (EU) 20241689...). Ce test permet de :
-
-Vérifier le bon fonctionnement du pipeline bout-en-bout, depuis l’analyse du texte brut jusqu’à la génération du score final.
-
-Valider l’intégration entre les modules extract.py, scoring.py, et pipeline.py.
-
-S’assurer que les fichiers sont correctement enregistrés :
-
-Les mesures extraites sont bien sauvegardées dans shared/measures/.
-
-Le fichier de résultats globaux est mis à jour dans shared/data/final_company_scores.csv.
-
-🔍 Ce test minimal est une preuve de robustesse du pipeline pour des cas individuels, et constitue une première brique essentielle avant d’automatiser l’analyse d’un lot complet de lois via une interface ou une boucle.
-
-📈 Exemple de sortie
-Symbol	Company	nb_matched_measures	normalized_score	Weight
-AAPL	Apple Inc.	5	-0.6	0.006
-JNJ	Johnson & Johnson	3	0.33	0.0056
-XOM	ExxonMobil	2	1.0	0.00003
-
-💡 Ces scores sont interprétables :
-
-+1.0 → fortement favorisé par la régulation
-
-0.0 → pas d’effet détecté
-
--1.0 → impact réglementaire négatif
-
-🛠️ Outils utilisés (AWS & stack technique)
-| Outil / Service                  | Utilisation                                 |
-| -------------------------------- | ------------------------------------------- |
-| **AWS Bedrock (Claude 3)**       | Interprétation multilingue des lois         |
-| **langdetect**                   | Détection automatique de langue             |
-| **pandas**                       | Traitement des données                      |
-| **Jupyter + EC2**                | Environnement de prototypage                |
-| *(S3 prévu mais non implémenté)* | Pour automatiser l’upload ou la persistance |
-
-🔮 Ce qu’on aurait voulu faire (roadmap)
-
-🧠 Apprentissage par renforcement ou fine-tuning des sentiments à partir de vraies décisions de marché.
-
-🧾 Extraction de la structure hiérarchique des articles et sous-mesures.
-
-📊 Dashboard React + Flask pour visualiser :
-
-Mesures par secteur
-
-Entreprises les plus sensibles
-
-Impact global pondéré (type « ESG Risk Indicator »)
-
-🕒 Historique temporel : suivi de l'évolution de scores après plusieurs lois.
-
-🔁 Comparaison automatique entre projets de loi et lois finales.
-
-🧩 Cross-matching avec chaînes d'approvisionnement (type SEC 10-K) pour meilleure exposition réelle.
