@@ -106,7 +106,7 @@ Interprétation :
 | **langdetect**         | Détection automatique de langue       |
 | **pandas**             | Analyse et nettoyage de données       |
 | **Jupyter + EC2**      | Prototypage cloud                     |
-| *(S3 prévu)*           | Persistance automatique (non fait)    |
+| **S3**                 | Persistance automatique               |
 
 ---
 
