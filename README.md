@@ -26,7 +26,7 @@ shared/
 ├── directives/
 │   └── *.html / *.xml              # Textes législatifs bruts à analyser
 │
-└── main.py              # Script de test exécutant le pipeline complet pour chaque loi
+└── main.py              # Script de test exécutant le pipeline complet pour une loi
 ```
 
 ---
